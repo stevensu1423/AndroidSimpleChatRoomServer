@@ -96,10 +96,27 @@ wsServer.on('connection', ws => {
                         }
                         hostRegistry.set(roomId, temp)
                         wsRegistry.set(ws, {roomId: roomId, memberId: data.memberId})
-                        const updateData = {
-                            status: "1",
-                        }
-                        await chatRoomModel.updateOne({roomId: roomId}, updateData)
+
+                        const check = await chatRoomModel.find({roomId: roomId})
+
+                        if(check[0].chatData.length != 0){
+                            console.log("enter room again")
+                            const updateData = {
+                                status: "1",
+                                $set: {"chatData.$[element].isRead" : true}
+                            }
+                            const filter = {
+                                arrayFilters: [ { "element.senderId" : data.friendId}],
+                                multi: true
+                            }
+                            await chatRoomModel.updateOne({roomId: roomId}, updateData, filter)
+                        }else{
+                            const updateData = {
+                                status: "1",
+                            }
+                            await chatRoomModel.updateOne({roomId: roomId}, updateData)
+                        }          
+
                         break
                     }
                     case "1":{
@@ -109,10 +126,30 @@ wsServer.on('connection', ws => {
                         }
                         wsRegistry.set(ws, {roomId: roomId, memberId: data.memberId})
                         clientRegistry.set(roomId, temp)
-                        const updateData = {
-                            status: "2",
-                        }
-                        await chatRoomModel.updateOne({roomId: roomId}, updateData)
+
+                        const check = await chatRoomModel.find({roomId: roomId})
+
+                        if(check[0].chatData.length != 0){
+                            console.log("enter room again")
+                            const updateData = {
+                                status: "2",
+                                $set: {"chatData.$[element].isRead" : true}
+                            }
+                            const filter = {
+                                arrayFilters: [ { "element.senderId" : data.friendId}],
+                                multi: true
+                            }
+                            await chatRoomModel.updateOne({roomId: roomId}, updateData, filter)
+                            const host = hostRegistry.get(roomId)
+                            if(host){
+                                host.ws.send(JSON.stringify({message: "read", type:2, senderId: data.friendId, isImage: false, time:data.time}))
+                            }
+                        }else{
+                            const updateData = {
+                                status: "2"
+                            }
+                            await chatRoomModel.updateOne({roomId: roomId}, updateData)
+                        }             
                         break
                     }
                 }
@@ -142,28 +179,32 @@ wsServer.on('connection', ws => {
                 }
                 await chatRoomModel.updateOne({roomId: roomId}, chatData)
             }
-            // else if(type == 2){        
-            //     console.log("onRead id : "+data.memberId)
-            //     const updateChat = {
-            //         $set: {"chatData.$[element].isRead" : true}
-            //     }
-            //     const filter = {
-            //         arrayFilters: [ { "element.senderId" : data.memberId}],
-            //         multi: true
-            //     }
-            //     await chatRoomModel.findOneAndUpdate({roomId: roomId}, updateChat, filter)
-            //     const host = hostRegistry.get(roomId)
-            //     const client = clientRegistry.get(roomId)
-            //     if(host && client){
-            //         console.log("has host and client")
-            //         if(host.memberId == data.friendId){
-            //             host.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
-            //         }
-            //         if(client.memberId == data.friendId){
-            //             client.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
-            //         }
-            //     }            
-            // }
+            else if(type == 2){        
+                console.log("onRead id : "+data.memberId)
+                const updateChat = {
+                    $set: {"chatData.$[element].isRead" : true}
+                }
+                const filter = {
+                    arrayFilters: [ { "element.senderId" : data.friendId}],
+                    multi: true
+                }
+                await chatRoomModel.updateOne({roomId: roomId}, updateChat, filter)
+                const host = hostRegistry.get(roomId)
+                const client = clientRegistry.get(roomId)
+                if(host && client){
+                    console.log("has host and client")
+                    console.log("client memberId : "+client.memberId+" host memberId : "+host.memberId+" data memberId : "+ data.friendId)
+                    if(host.memberId == data.friendId){
+                        host.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                        console.log("sending host")
+                    }
+                    if(client.memberId == data.friendId){
+                        console.log("sending client")
+                        client.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+
+                    }
+                }            
+            }
         }
     })
 });
