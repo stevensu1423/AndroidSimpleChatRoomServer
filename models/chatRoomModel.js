@@ -13,7 +13,7 @@ const chat = new Schema(
 {  
     roomId : String,
     status: String,
-    chatData : [{message: String, senderId: String, time: String, isImage: Boolean, isRead: Boolean}],
+    chatData : [{id: String, message: String, senderId: String, time: String, isImage: Boolean, isRead: Boolean, isUnSend: Boolean}],
 }
 )
 chat.set('collection','chat');

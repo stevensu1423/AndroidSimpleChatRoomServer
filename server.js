@@ -159,21 +159,23 @@ wsServer.on('connection', ws => {
                     const client = clientRegistry.get(roomId)
                     if(host && client){
                         if(host.memberId == data.friendId){
-                            host.ws.send(JSON.stringify({message: data.message,type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                            host.ws.send(JSON.stringify({id: data.id, message: data.message,type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time, isUnSend: false}))
                         }
                         if(client.memberId == data.friendId){
-                            client.ws.send(JSON.stringify({message: data.message,type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                            client.ws.send(JSON.stringify({id: data.id, message: data.message,type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time, isUnSend: false}))
                         }
                     }
                 }
                 const chatData = {
                     $push : {
                         chatData :{
+                            id: data.id,
                             message: data.message,
                             senderId: data.memberId,
                             isImage: data.isImage,
                             isRead: false,
-                            time: data.time
+                            time: data.time,
+                            isUnSend: data.isUnSend
                         }
                     }
                 }
@@ -204,6 +206,24 @@ wsServer.on('connection', ws => {
 
                     }
                 }            
+            }else if(type == 3){
+                console.log("onUnSend id : "+data.memberId)
+                
+                const host = hostRegistry.get(roomId)
+                const client = clientRegistry.get(roomId)
+                if(host && client){
+                    console.log("has host and client")
+                    console.log("client memberId : "+client.memberId+" host memberId : "+host.memberId+" data memberId : "+ data.friendId)
+                    if(host.memberId == data.friendId){
+                        host.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                        console.log("sending host")
+                    }
+                    if(client.memberId == data.friendId){
+                        console.log("sending client")
+                        client.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+
+                    }
+                }        
             }
         }
     })
