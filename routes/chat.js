@@ -308,6 +308,31 @@ router.post('/myFriends', async function(req, res, next){
     }
 })
 
+router.post('/unSendMessage', async function(req, res, next){
+    const roomId = req.body['roomId']
+    const senderId = req.body['senderId']
+    const chatId = req.body['chatId']
+
+    const data = await chatRoomModel.find({roomId: roomId})
+    if(data.length > 0){
+        if(data[0].chatData.length > 0){
+            const updateData = {
+                $set: {"chatData.$[element].isUnSend" : true}
+            }
+            const filter = {
+                arrayFilters: [ { "element.senderId" : senderId, "element.id" : chatId}],
+                multi: true
+            }
+            await chatRoomModel.updateOne({roomId: roomId}, updateData, filter)
+        }
+    }
+    res.json({
+        status: 200,
+        message: "ok",
+        data: []
+    })
+})
+
 function generateUniqueString(length) {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
