@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const mongoDB = '輸入你的MongoDB連結可為遠端或是本地';
+const mongooseConfig = require('../mongooseConfig.json');
+const mongoDB = mongooseConfig.url
 
 mongoose.connect(mongoDB,{useNewUrlParser : true, useUnifiedTopology: true  });
 mongoose.Promise = global.Promise;

@@ -82,12 +82,12 @@ wsServer.on('connection', ws => {
         const data = JSON.parse(msg)
         const roomId = data.roomId
         type = data.type
-
+        console.log("onMessage : ", data)
         const chatRoom = await chatRoomModel.find({roomId: roomId})
         if(chatRoom.length == 0){
             ws.send(JSON.stringify({message: "Error"}))
         }else{
-            if(type == 0){
+            if(type == "0"){
                 switch(chatRoom[0].status){
                     case "0":{
                         const temp = {
@@ -153,7 +153,7 @@ wsServer.on('connection', ws => {
                         break
                     }
                 }
-            }else if(type == 1){        
+            }else if(type == "1"){        
                 if(chatRoom[0].status == "2"){
                     const host = hostRegistry.get(roomId)
                     const client = clientRegistry.get(roomId)
@@ -181,7 +181,7 @@ wsServer.on('connection', ws => {
                 }
                 await chatRoomModel.updateOne({roomId: roomId}, chatData)
             }
-            else if(type == 2){        
+            else if(type == "2"){        
                 console.log("onRead id : "+data.memberId)
                 const updateChat = {
                     $set: {"chatData.$[element].isRead" : true}
@@ -206,7 +206,7 @@ wsServer.on('connection', ws => {
 
                     }
                 }            
-            }else if(type == 3){
+            }else if(type == "3"){
                 console.log("onUnSend id : "+data.memberId)
                 
                 const host = hostRegistry.get(roomId)

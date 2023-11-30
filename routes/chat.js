@@ -292,20 +292,61 @@ router.post('/friendConfirm', async function(req, res, next){
 
 router.post('/myFriends', async function(req, res, next){
     const memberId = req.body['memberId']
+    console.log(memberId)
     const data = await memberModel.find({memberId: memberId})
-    if(data.length > 0){
+    memberModel.aggregate([{
+        $match: { memberId: memberId },
+    }, {
+        $unwind: '$friends'
+    }, {
+        $lookup: {
+            from: 'chat',
+            localField: "friends.roomId",
+            foreignField: 'roomId',
+            as: 'latestChat'
+        }
+    }, {
+        $unwind: {
+            path: '$latestChat'
+        }
+    }, {
+        $project: {
+            friend: {
+                memberId: "$friends.memberId",
+                name: "$friends.name"
+            },
+            roomId: "$friends.roomId",
+            lastestChat: "$latestChat.chatData"
+        }
+    }
+    ]).exec((err, result) => {
+        if (err) {
+            res.json({
+                status: 400,
+                message: "找不到會員",
+                data: []
+            })
+            return;
+        }
         res.json({
             status: 200,
             message: "成功",
-            data: data[0].friends
+            data: result
         })
-    }else{
-        res.json({
-            status: 400,
-            message: "找不到會員",
-            data: []
-        })
-    }
+    })
+    // if(data.length > 0){
+    //     res.json({
+    //         status: 200,
+    //         message: "成功",
+    //         data: data[0].friends
+    //     })
+    // }else{
+    //     res.json({
+    //         status: 400,
+    //         message: "找不到會員",
+    //         data: []
+    //     })
+    // }
 })
 
 router.post('/unSendMessage', async function(req, res, next){
