@@ -316,7 +316,7 @@ router.post('/myFriends', async function(req, res, next){
                 name: "$friends.name"
             },
             roomId: "$friends.roomId",
-            lastestChat: "$latestChat.chatData"
+            latestChat: "$latestChat.chatData"
         }
     }
     ]).exec((err, result) => {
