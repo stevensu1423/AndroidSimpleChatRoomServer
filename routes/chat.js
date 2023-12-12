@@ -4,6 +4,14 @@ const chatRoomModel = require('../models/chatRoomModel.js');
 const memberModel = require('../models/memberModel.js')
 const multer = require('multer');
 
+var admin = require("firebase-admin");
+var serviceAccount = require("../fcm/chatroom-fbdcf-firebase-adminsdk-3rrh4-53fbc8583e.json");
+
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount)
+// });
+
+
 const storage = multer.diskStorage({
     destination: 'uploads/',
     filename: (req, file, cb) => {
@@ -74,6 +82,7 @@ router.post('/getChatList', async function (req, res, next){
 })
 
 router.post('/login', async function (req, res, next){
+    console.log('user login')
     const email = req.body['email']
     const password = req.body['password']
 
@@ -256,6 +265,27 @@ router.post('/myFriendRequest',async function(req, res, next){
     
 })
 
+router.post('/updateFcmToken', async function(req, res, next){
+    const memberId = req.body['memberId']
+    const fcmToken = req.body['fcmToken']
+    try{
+        await memberModel.updateOne({memberId: memberId},{fcm_token: fcmToken})
+        res.json(
+            {
+                status: 200,
+                message: "成功"
+            }
+        )
+    }catch(e){
+        res.json(
+            {
+                status: 400,
+                message: "失敗"
+            }
+        )
+    }
+})
+
 router.post('/friendConfirm', async function(req, res, next){
     const memberId = req.body['memberId']
     const requestId = req.body['requestId']
@@ -290,49 +320,144 @@ router.post('/friendConfirm', async function(req, res, next){
 
 })
 
-router.post('/myFriends', async function(req, res, next){
+router.post('/sendFcmTest', async function(req, res, next){
+    const fcmToken = req.body['fcmToken']
+    const message = req.body['message']
+    const name = req.body['name']
+    
+
+    const data = {
+        token: fcmToken,
+        notification: {
+            title: name,
+            body: message
+        }
+      } 
+      admin.messaging().send(data)
+      .then((response) => {
+        // Response 是一個字串型別的 message ID.
+        console.log('Successfully sent message:', response);
+      })
+      .catch((error) => {
+        console.log('Error sending message:', error);
+      });
+    res.json({
+        status: 200
+    })
+})
+
+function sendFcm(fcmToken, message, name){
+    const data = {
+        token: fcmToken,
+        notification: {
+            title: name,
+            body: message
+        }
+      } 
+      admin.messaging().send(data)
+      .then((response) => {
+        // Response 是一個字串型別的 message ID.
+        console.log('Successfully sent message:', response);
+      })
+      .catch((error) => {
+        console.log('Error sending message:', error);
+      });
+}
+
+router.post('/myUnreadCountAndFriendRequest', async function(req, res, next){
     const memberId = req.body['memberId']
-    console.log(memberId)
-    const data = await memberModel.find({memberId: memberId})
-    memberModel.aggregate([{
-        $match: { memberId: memberId },
-    }, {
-        $unwind: '$friends'
-    }, {
-        $lookup: {
-            from: 'chat',
-            localField: "friends.roomId",
-            foreignField: 'roomId',
-            as: 'latestChat'
+    const friendRequestCount = await memberModel.find({memberId: memberId})
+    console.log(friendRequestCount)
+    if(friendRequestCount.length != 0){
+        const count = friendRequestCount[0].friendRequest.length
+            memberModel.aggregate([{
+            $match: { memberId: memberId },
+        }, {
+            $unwind: '$friends'
+        }, {
+            $lookup: {
+                from: 'chat',
+                localField: "friends.roomId",
+                foreignField: 'roomId',
+                as: 'latestChat'
+            }
+        }, {
+            $unwind: {
+                path: '$latestChat'
+            }
+        }, {
+            $project: {
+                latestChat: "$latestChat.chatData"
+            }
         }
-    }, {
-        $unwind: {
-            path: '$latestChat'
-        }
-    }, {
-        $project: {
-            friend: {
-                memberId: "$friends.memberId",
-                name: "$friends.name"
-            },
-            roomId: "$friends.roomId",
-            latestChat: "$latestChat.chatData"
-        }
-    }
-    ]).exec((err, result) => {
-        if (err) {
+        ]).exec((err, result) => {
+            if (err) {
+                res.json({
+                    status: 400,
+                    message: "找不到會員",
+                    data: []
+                })
+                return;
+            }
+            console.log(result)
+            res.json({
+                status: 200,
+                message: "成功",
+                data: result
+            })
+        })
+        }else{
             res.json({
                 status: 400,
                 message: "找不到會員",
                 data: []
             })
-            return;
         }
-        res.json({
-            status: 200,
-            message: "成功",
-            data: result
-        })
+
+    })
+
+    router.post('/myFriends', async function(req, res, next){
+        const memberId = req.body['memberId']
+        console.log(memberId)
+        memberModel.aggregate([{
+            $match: { memberId: memberId },
+        }, {
+            $unwind: '$friends'
+        }, {
+            $lookup: {
+                from: 'chat',
+                localField: "friends.roomId",
+                foreignField: 'roomId',
+                as: 'latestChat'
+            }
+        }, {
+            $unwind: {
+                path: '$latestChat'
+            }
+        }, {
+            $project: {
+                friend: {
+                    memberId: "$friends.memberId",
+                    name: "$friends.name"
+                },
+                roomId: "$friends.roomId",
+                latestChat: "$latestChat.chatData"
+            }
+        }
+        ]).exec((err, result) => {
+            if (err) {
+                res.json({
+                    status: 400,
+                    message: "找不到會員",
+                    data: []
+                })
+                return;
+            }
+            res.json({
+                status: 200,
+                message: "成功",
+                data: result
+            })
     })
     // if(data.length > 0){
     //     res.json({

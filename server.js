@@ -2,8 +2,17 @@ const express = require('express');
 const WebSocket = require('ws');
 const chatRouter = require('./routes/chat')
 const chatRoomModel = require('./models/chatRoomModel.js');
+const memberModel = require('./models/memberModel.js')
+
 const path = require('path');
 const fs = require('fs')
+var admin = require("firebase-admin");
+var serviceAccount = require("./fcm/chatroom-fbdcf-firebase-adminsdk-3rrh4-53fbc8583e.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
 
 const app = express();
 const port = 3000; 
@@ -166,6 +175,15 @@ wsServer.on('connection', ws => {
                         }
                     }
                 }
+                if(chatRoom[0].status == "1"){ //當前聊天室只有一人才寄送fcm 
+                    console.log("finding friend")             
+                    const friend = await memberModel.find({memberId: data.friendId})
+                    console.log('friend', friend)
+                    if(friend.length != 0){      
+                        console.log("sending fcm")             
+                        sendFcm(friend[0].fcm_token, data.message, data.name)
+                    }
+                }
                 const chatData = {
                     $push : {
                         chatData :{
@@ -228,5 +246,23 @@ wsServer.on('connection', ws => {
         }
     })
 });
+
+function sendFcm(fcmToken, message, name){
+    const data = {
+        token: fcmToken,
+        notification: {
+            title: name,
+            body: message
+        }
+      } 
+      admin.messaging().send(data)
+      .then((response) => {
+        // Response 是一個字串型別的 message ID.
+        console.log('Successfully sent message:', response);
+      })
+      .catch((error) => {
+        console.log('Error sending message:', error);
+      });
+}
 
 

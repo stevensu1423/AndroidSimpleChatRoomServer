@@ -18,7 +18,8 @@ const Memberschema = new Schema(
       userName: { type: String, max: 100 },
       password: { type: String, required: true, max: 100 },
       friends: [{memberId: String, name: String, roomId: String, mType: String}],
-      friendRequest: [{memberId: String, name: String, mType: String}]
+      friendRequest: [{memberId: String, name: String, mType: String}],
+      fcm_token: {type: String}
    },{
       strict : false
    }
