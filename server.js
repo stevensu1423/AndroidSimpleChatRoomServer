@@ -151,7 +151,7 @@ wsServer.on('connection', ws => {
                             await chatRoomModel.updateOne({roomId: roomId}, updateData, filter)
                             const host = hostRegistry.get(roomId)
                             if(host){
-                                host.ws.send(JSON.stringify({message: "read", type:2, senderId: data.friendId, isImage: false, time:data.time}))
+                                host.ws.send(JSON.stringify({message: "read", type: 4, senderId: data.friendId, isImage: false, time:data.time}))
                             }
                         }else{
                             const updateData = {
@@ -215,15 +215,27 @@ wsServer.on('connection', ws => {
                     console.log("has host and client")
                     console.log("client memberId : "+client.memberId+" host memberId : "+host.memberId+" data memberId : "+ data.friendId)
                     if(host.memberId == data.friendId){
-                        host.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                        // host.ws.send(JSON.stringify({ id: chatId, message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                        host.ws.send(JSON.stringify({ message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+
                         console.log("sending host")
                     }
                     if(client.memberId == data.friendId){
                         console.log("sending client")
-                        client.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                        // client.ws.send(JSON.stringify({id: chatId, message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                        client.ws.send(JSON.stringify({ message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
 
                     }
-                }            
+                }           
+                // const unReadIdData = await chatRoomModel.find({roomId: roomId})
+                // if(unReadIdData.length > 0){
+                //     if(unReadIdData[0].chatData.length > 0){
+                //         const chatId = unReadIdData[0].chatData.find(function(item, index, arr){
+                //             return item.isRead == false
+                //         })
+                         
+                //     }
+                // }             
             }else if(type == "3"){
                 console.log("onUnSend id : "+data.memberId)
                 
@@ -233,12 +245,12 @@ wsServer.on('connection', ws => {
                     console.log("has host and client")
                     console.log("client memberId : "+client.memberId+" host memberId : "+host.memberId+" data memberId : "+ data.friendId)
                     if(host.memberId == data.friendId){
-                        host.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                        host.ws.send(JSON.stringify({id: data.id, message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
                         console.log("sending host")
                     }
                     if(client.memberId == data.friendId){
                         console.log("sending client")
-                        client.ws.send(JSON.stringify({message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
+                        client.ws.send(JSON.stringify({id: data.id, message: data.message, type:data.type, senderId: data.memberId, isImage: data.isImage, time:data.time}))
 
                     }
                 }        
